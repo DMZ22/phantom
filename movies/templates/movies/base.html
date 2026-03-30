@@ -1,0 +1,351 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Phantom{% endblock %}</title>
+
+  <!-- Tailwind (local) -->
+  <script src="{% static 'js/tailwind.js' %}"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            phantom: {
+              red: '#e50914',
+              'red-dark': '#b20710',
+              'red-light': '#ff1a25',
+              dark: '#0a0a0a',
+              'dark-light': '#141414',
+              'dark-lighter': '#1a1a1a',
+              card: '#181818',
+            },
+          },
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
+
+  <!-- Styles (local) -->
+  <link rel="stylesheet" href="{% static 'css/globals.css' %}">
+
+  <!-- Alpine.js (local) -->
+  <script defer src="{% static 'js/alpine.min.js' %}"></script>
+
+  <!-- HTMX (local) -->
+  <script src="{% static 'js/htmx.min.js' %}"></script>
+
+  {% block head_extra %}{% endblock %}
+</head>
+
+<body class="min-h-screen bg-[#0a0a0a] text-white" style="font-family: Inter, ui-sans-serif, system-ui, sans-serif;">
+
+  <!-- ==========================================
+       NAVBAR
+       ========================================== -->
+  <nav
+    x-data="{ scrolled: false, mobileOpen: false, regionOpen: false, searchOpen: false }"
+    @scroll.window="scrolled = window.scrollY > 20"
+    :class="scrolled ? 'glass-strong shadow-lg shadow-black/50' : 'bg-gradient-to-b from-black/80 to-transparent'"
+    class="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
+  >
+    <div class="max-w-[1400px] mx-auto px-4 sm:px-6">
+      <div class="flex items-center justify-between h-16">
+
+        <!-- Logo -->
+        <a href="/" class="flex-shrink-0">
+          <span class="flicker-logo text-2xl sm:text-3xl font-extrabold tracking-widest">
+            <span class="text-[#e50914]">P</span><span class="text-white/90">hantom</span>
+          </span>
+        </a>
+
+        <!-- Desktop Nav Links -->
+        <div class="hidden md:flex items-center space-x-6 ml-8">
+          <a href="/" class="text-sm font-medium text-white/80 hover:text-white transition">Home</a>
+          <a href="/movies/" class="text-sm font-medium text-white/80 hover:text-white transition">Movies</a>
+          <a href="/events/" class="text-sm font-medium text-white/80 hover:text-white transition">Events</a>
+        </div>
+
+        <!-- Right Side -->
+        <div class="flex items-center space-x-3">
+
+          <!-- Search Toggle -->
+          <button @click="searchOpen = !searchOpen" class="p-2 rounded-full hover:bg-white/10 transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+          </button>
+
+          <!-- Region Selector -->
+          <div class="relative" @click.away="regionOpen = false">
+            <button @click="regionOpen = !regionOpen" class="flex items-center space-x-1 p-2 rounded-full hover:bg-white/10 transition text-sm">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              <span class="hidden sm:inline" x-text="$store.region.code"></span>
+            </button>
+            <div
+              x-show="regionOpen"
+              x-transition:enter="transition ease-out duration-200"
+              x-transition:enter-start="opacity-0 scale-95"
+              x-transition:enter-end="opacity-100 scale-100"
+              x-transition:leave="transition ease-in duration-150"
+              x-transition:leave-start="opacity-100 scale-100"
+              x-transition:leave-end="opacity-0 scale-95"
+              x-cloak
+              class="absolute right-0 mt-2 w-56 glass-strong rounded-xl shadow-2xl shadow-black/60 overflow-hidden max-h-80 overflow-y-auto"
+            >
+              <template x-for="r in $store.region.regions" :key="r.code">
+                <button
+                  @click="$store.region.setRegion(r.code); regionOpen = false"
+                  :class="r.code === $store.region.code ? 'bg-[#e50914]/20 text-[#e50914]' : 'text-white/80 hover:bg-white/5'"
+                  class="w-full text-left px-4 py-2.5 text-sm flex items-center justify-between transition"
+                >
+                  <span x-text="r.name"></span>
+                  <span class="text-white/40 text-xs" x-text="r.currency"></span>
+                </button>
+              </template>
+            </div>
+          </div>
+
+          <!-- Mobile Menu Toggle -->
+          <button @click="mobileOpen = !mobileOpen" class="md:hidden p-2 rounded-full hover:bg-white/10 transition">
+            <svg x-show="!mobileOpen" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+            <svg x-show="mobileOpen" x-cloak class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Search Bar (expandable) -->
+      <div
+        x-show="searchOpen"
+        x-transition:enter="transition ease-out duration-200"
+        x-transition:enter-start="opacity-0 -translate-y-2"
+        x-transition:enter-end="opacity-100 translate-y-0"
+        x-transition:leave="transition ease-in duration-150"
+        x-transition:leave-start="opacity-100 translate-y-0"
+        x-transition:leave-end="opacity-0 -translate-y-2"
+        x-cloak
+        class="pb-3"
+      >
+        <form action="/search/" method="GET" class="flex items-center gap-2">
+          <input
+            type="text"
+            name="q"
+            placeholder="Search movies..."
+            class="flex-1 bg-white/10 border border-white/10 rounded-lg px-4 py-2 text-sm text-white placeholder-white/40 focus:border-[#e50914]/50 transition"
+            autocomplete="off"
+          >
+          <button type="submit" class="bg-[#e50914] hover:bg-[#b20710] text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+            Search
+          </button>
+        </form>
+      </div>
+
+      <!-- Mobile Nav -->
+      <div
+        x-show="mobileOpen"
+        x-transition:enter="transition ease-out duration-200"
+        x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100"
+        x-transition:leave="transition ease-in duration-150"
+        x-cloak
+        class="md:hidden pb-4 border-t border-white/5"
+      >
+        <div class="flex flex-col space-y-1 pt-3">
+          <a href="/" class="px-3 py-2 rounded-lg text-sm text-white/80 hover:text-white hover:bg-white/5 transition">Home</a>
+          <a href="/movies/" class="px-3 py-2 rounded-lg text-sm text-white/80 hover:text-white hover:bg-white/5 transition">Movies</a>
+          <a href="/events/" class="px-3 py-2 rounded-lg text-sm text-white/80 hover:text-white hover:bg-white/5 transition">Events</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- ==========================================
+       FOOTER
+       ========================================== -->
+  <footer class="border-t border-white/5 mt-20">
+    <div class="max-w-[1400px] mx-auto px-4 sm:px-6 py-10">
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+        <span class="flicker-logo text-xl font-extrabold tracking-widest">
+          <span class="text-[#e50914]">P</span><span class="text-white/90">hantom</span>
+        </span>
+        <div class="flex items-center space-x-6 text-sm text-white/40">
+          <a href="/" class="hover:text-white/70 transition">Home</a>
+          <a href="/movies/" class="hover:text-white/70 transition">Movies</a>
+          <a href="/events/" class="hover:text-white/70 transition">Events</a>
+        </div>
+        <p class="text-xs text-white/30">Powered by TMDB. Not affiliated with any streaming service.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ==========================================
+       CHATBOT
+       ========================================== -->
+  <div
+    x-data="{
+      open: false,
+      messages: [],
+      input: '',
+      loading: false,
+      async send() {
+        if (!this.input.trim() || this.loading) return;
+        const userMsg = this.input.trim();
+        this.input = '';
+        this.messages.push({ role: 'user', content: userMsg });
+        this.loading = true;
+        this.$nextTick(() => {
+          const el = this.$refs.chatMessages;
+          if (el) el.scrollTop = el.scrollHeight;
+        });
+        try {
+          const res = await fetch('/api/chat/', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': getCookie('csrftoken'),
+            },
+            body: JSON.stringify({
+              message: userMsg,
+              messages: this.messages,
+            }),
+          });
+          const data = await res.json();
+          this.messages.push({ role: 'assistant', content: data.response || 'Something went wrong.' });
+        } catch (e) {
+          this.messages.push({ role: 'assistant', content: 'Connection error. Try again.' });
+        }
+        this.loading = false;
+        this.$nextTick(() => {
+          const el = this.$refs.chatMessages;
+          if (el) el.scrollTop = el.scrollHeight;
+        });
+      }
+    }"
+    class="fixed bottom-6 right-6 z-50"
+  >
+    <!-- Chat Toggle Button -->
+    <button
+      x-show="!open"
+      @click="open = true"
+      x-transition:enter="transition ease-out duration-200"
+      x-transition:enter-start="scale-0"
+      x-transition:enter-end="scale-100"
+      class="w-14 h-14 rounded-full bg-[#e50914] hover:bg-[#b20710] shadow-lg shadow-red-900/40 flex items-center justify-center transition-all"
+    >
+      <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+      </svg>
+    </button>
+
+    <!-- Chat Panel -->
+    <div
+      x-show="open"
+      x-transition:enter="transition ease-out duration-300"
+      x-transition:enter-start="opacity-0 translate-y-4 scale-95"
+      x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+      x-transition:leave="transition ease-in duration-200"
+      x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+      x-transition:leave-end="opacity-0 translate-y-4 scale-95"
+      x-cloak
+      class="w-80 sm:w-96 h-[500px] glass-strong rounded-2xl shadow-2xl shadow-black/60 flex flex-col overflow-hidden"
+    >
+      <!-- Header -->
+      <div class="flex items-center justify-between px-4 py-3 border-b border-white/5 bg-[#e50914]/10">
+        <div class="flex items-center space-x-2">
+          <div class="w-2 h-2 rounded-full bg-[#e50914] animate-pulse"></div>
+          <span class="font-semibold text-sm">Phantom AI</span>
+        </div>
+        <button @click="open = false" class="p-1 rounded-full hover:bg-white/10 transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Messages -->
+      <div x-ref="chatMessages" class="flex-1 overflow-y-auto p-4 space-y-3">
+        <!-- Welcome message -->
+        <template x-if="messages.length === 0">
+          <div class="text-center py-8">
+            <div class="text-4xl mb-3">🎬</div>
+            <p class="text-white/60 text-sm">Ask me anything about movies!</p>
+          </div>
+        </template>
+        <template x-for="(msg, i) in messages" :key="i">
+          <div :class="msg.role === 'user' ? 'flex justify-end' : 'flex justify-start'">
+            <div
+              :class="msg.role === 'user'
+                ? 'bg-[#e50914] text-white rounded-2xl rounded-br-md'
+                : 'bg-white/10 text-white/90 rounded-2xl rounded-bl-md'"
+              class="max-w-[80%] px-3.5 py-2.5 text-sm leading-relaxed"
+            >
+              <span x-text="msg.content"></span>
+              <!-- TTS button for assistant messages -->
+              <template x-if="msg.role === 'assistant'">
+                <button @click="speakText(msg.content)" class="inline-block ml-2 opacity-50 hover:opacity-100 transition" title="Listen">
+                  <svg class="w-3.5 h-3.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072M18.364 5.636a9 9 0 010 12.728M11 5L6 9H2v6h4l5 4V5z"/>
+                  </svg>
+                </button>
+              </template>
+            </div>
+          </div>
+        </template>
+        <!-- Typing indicator -->
+        <template x-if="loading">
+          <div class="flex justify-start">
+            <div class="bg-white/10 rounded-2xl rounded-bl-md px-4 py-3">
+              <span class="typing-dot"></span>
+              <span class="typing-dot"></span>
+              <span class="typing-dot"></span>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <!-- Input -->
+      <div class="p-3 border-t border-white/5">
+        <form @submit.prevent="send()" class="flex items-center gap-2">
+          <input
+            x-model="input"
+            type="text"
+            placeholder="Ask about movies..."
+            class="flex-1 bg-white/10 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-white/40 focus:border-[#e50914]/50 transition"
+            :disabled="loading"
+          >
+          <button
+            type="submit"
+            :disabled="loading || !input.trim()"
+            class="p-2 rounded-xl bg-[#e50914] hover:bg-[#b20710] disabled:opacity-40 disabled:cursor-not-allowed transition"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+            </svg>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Phantom JS (local) -->
+  <script src="{% static 'js/phantom.js' %}"></script>
+
+  {% block scripts_extra %}{% endblock %}
+</body>
+</html>

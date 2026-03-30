@@ -1,0 +1,211 @@
+{% extends "movies/base.html" %}
+{% load static %}
+
+{% block title %}Browse Movies - Phantom{% endblock %}
+
+{% block content %}
+<div class="pt-24 pb-10" x-data="browseData()" x-init="init()">
+  <div class="max-w-[1400px] mx-auto px-4 sm:px-6">
+
+    <!-- Header -->
+    <div class="mb-8">
+      <h1 class="text-3xl sm:text-4xl font-extrabold">Browse Movies</h1>
+      <p class="text-white/50 mt-1">Discover films from around the world</p>
+    </div>
+
+    <!-- ==========================================
+         FILTERS
+         ========================================== -->
+    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-8">
+
+      <!-- Genre Pills -->
+      <div class="flex-1 overflow-x-auto hide-scrollbar">
+        <div class="flex items-center space-x-2 pb-1">
+          <button
+            @click="selectedGenre = null; loadMovies(true)"
+            :class="!selectedGenre ? 'bg-[#e50914] text-white' : 'bg-white/10 text-white/60 hover:text-white hover:bg-white/15'"
+            class="flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition"
+          >All</button>
+          <template x-for="genre in genres" :key="genre.id">
+            <button
+              @click="selectedGenre = genre.id; loadMovies(true)"
+              :class="selectedGenre === genre.id ? 'bg-[#e50914] text-white' : 'bg-white/10 text-white/60 hover:text-white hover:bg-white/15'"
+              class="flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition whitespace-nowrap"
+              x-text="genre.name"
+            ></button>
+          </template>
+        </div>
+      </div>
+
+      <!-- Sort Dropdown -->
+      <div class="relative" x-data="{ sortOpen: false }" @click.away="sortOpen = false">
+        <button
+          @click="sortOpen = !sortOpen"
+          class="flex items-center space-x-2 bg-white/10 hover:bg-white/15 px-4 py-1.5 rounded-full text-sm font-medium transition"
+        >
+          <svg class="w-4 h-4 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"/></svg>
+          <span x-text="sortOptions.find(o => o.value === sortBy)?.label || 'Sort'"></span>
+        </button>
+        <div
+          x-show="sortOpen"
+          x-transition
+          x-cloak
+          class="absolute right-0 mt-2 w-48 glass-strong rounded-xl shadow-2xl shadow-black/60 overflow-hidden z-20"
+        >
+          <template x-for="opt in sortOptions" :key="opt.value">
+            <button
+              @click="sortBy = opt.value; sortOpen = false; loadMovies(true)"
+              :class="sortBy === opt.value ? 'bg-[#e50914]/20 text-[#e50914]' : 'text-white/70 hover:bg-white/5'"
+              class="w-full text-left px-4 py-2.5 text-sm transition"
+              x-text="opt.label"
+            ></button>
+          </template>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==========================================
+         MOVIE GRID
+         ========================================== -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6">
+      <template x-for="movie in movies" :key="movie.id">
+        <a :href="'/movie/' + movie.id + '/'" class="group">
+          <div class="relative rounded-lg overflow-hidden aspect-[2/3] bg-white/5">
+            <img
+              :src="movie.poster_path ? 'https://image.tmdb.org/t/p/w500' + movie.poster_path : ''"
+              :alt="movie.title"
+              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              loading="lazy"
+            >
+            <div class="absolute inset-0 card-gradient opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div class="absolute bottom-0 left-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              <p class="text-xs text-white/60" x-text="movie.release_date?.substring(0,4)"></p>
+            </div>
+            <!-- Rating badge -->
+            <div class="absolute top-2 right-2">
+              <span
+                :class="movie.vote_average >= 7 ? 'bg-green-600' : movie.vote_average >= 5 ? 'bg-yellow-600' : 'bg-red-600'"
+                class="text-xs font-bold px-1.5 py-0.5 rounded"
+                x-text="movie.vote_average?.toFixed(1)"
+              ></span>
+            </div>
+          </div>
+          <p class="mt-2 text-sm text-white/70 truncate group-hover:text-white transition" x-text="movie.title"></p>
+        </a>
+      </template>
+    </div>
+
+    <!-- Empty State -->
+    <template x-if="movies.length === 0 && !loading">
+      <div class="text-center py-20">
+        <svg class="w-20 h-20 mx-auto mb-4 text-white/10" fill="currentColor" viewBox="0 0 24 24"><path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z"/></svg>
+        <p class="text-xl font-bold text-white/40">No movies found</p>
+        <p class="text-sm text-white/30 mt-1">Try a different genre or sort option</p>
+      </div>
+    </template>
+
+    <!-- Loading -->
+    <template x-if="loading">
+      <div class="flex justify-center py-10">
+        <div class="w-8 h-8 border-2 border-[#e50914] border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    </template>
+
+    <!-- Load More -->
+    <div class="text-center mt-10" x-show="hasMore && !loading && movies.length > 0">
+      <button
+        @click="loadMore()"
+        class="bg-white/10 hover:bg-white/15 text-white px-8 py-3 rounded-lg font-medium transition"
+      >
+        Load More
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function browseData() {
+  return {
+    movies: [],
+    genres: [],
+    selectedGenre: null,
+    sortBy: 'popularity',
+    sortOptions: [
+      { value: 'popularity', label: 'Most Popular' },
+      { value: 'top_rated', label: 'Top Rated' },
+      { value: 'now_playing', label: 'Now Playing' },
+      { value: 'trending', label: 'Trending' },
+    ],
+    page: 1,
+    hasMore: true,
+    loading: false,
+
+    init() {
+      // Parse initial data
+      try {
+        this.movies = JSON.parse('{{ movies_json|default:"[]"|escapejs }}');
+      } catch(e) { this.movies = []; }
+      try {
+        this.genres = JSON.parse('{{ genres_json|default:"[]"|escapejs }}');
+      } catch(e) { this.genres = []; }
+
+      // Check URL for genre param
+      const params = new URLSearchParams(window.location.search);
+      const genreParam = params.get('genre');
+      if (genreParam) {
+        this.selectedGenre = parseInt(genreParam);
+        this.loadMovies(true);
+      }
+
+      if (this.genres.length === 0) {
+        this.fetchGenres();
+      }
+    },
+
+    async fetchGenres() {
+      try {
+        const res = await fetch('/api/movies/genres/');
+        const data = await res.json();
+        this.genres = data.genres || [];
+      } catch(e) {}
+    },
+
+    async loadMovies(reset) {
+      if (reset) {
+        this.page = 1;
+        this.movies = [];
+        this.hasMore = true;
+      }
+      this.loading = true;
+      try {
+        const region = Alpine.store('region').code;
+        let url;
+        if (this.selectedGenre) {
+          url = `/api/movies/genre/${this.selectedGenre}/?page=${this.page}&region=${region}`;
+        } else {
+          url = `/api/movies/${this.sortBy}/?page=${this.page}&region=${region}`;
+        }
+        const res = await fetch(url);
+        const data = await res.json();
+        const results = data.results || [];
+        if (reset) {
+          this.movies = results;
+        } else {
+          this.movies = [...this.movies, ...results];
+        }
+        this.hasMore = this.page < (data.total_pages || 1);
+      } catch(e) {
+        console.warn('Failed to load movies:', e);
+      }
+      this.loading = false;
+    },
+
+    loadMore() {
+      this.page++;
+      this.loadMovies(false);
+    },
+  };
+}
+</script>
+{% endblock %}

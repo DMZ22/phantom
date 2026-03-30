@@ -1,0 +1,359 @@
+{% extends "movies/base.html" %}
+{% load static %}
+
+{% block title %}Book Tickets - {{ movie.title|default:"Movie" }} - Phantom{% endblock %}
+
+{% block content %}
+<div class="pt-20 pb-10" x-data="bookingData()" x-init="init()">
+  <div class="max-w-[1100px] mx-auto px-4 sm:px-6">
+
+    <!-- ==========================================
+         MOVIE SUMMARY
+         ========================================== -->
+    <div class="glass rounded-xl p-4 sm:p-6 mb-8 flex flex-col sm:flex-row items-center gap-4">
+      <div class="w-20 sm:w-24 flex-shrink-0">
+        <div class="rounded-lg overflow-hidden aspect-[2/3] bg-white/5">
+          {% if movie.poster_path %}
+          <img src="https://image.tmdb.org/t/p/w500{{ movie.poster_path }}" alt="{{ movie.title }}" class="w-full h-full object-cover">
+          {% endif %}
+        </div>
+      </div>
+      <div class="flex-1 text-center sm:text-left">
+        <h1 class="text-xl sm:text-2xl font-bold">{{ movie.title|default:"Movie" }}</h1>
+        <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2 mt-1 text-sm text-white/50">
+          {% if movie.runtime %}<span>{{ movie.runtime }} min</span>{% endif %}
+          {% if movie.release_date %}<span>{{ movie.release_date }}</span>{% endif %}
+          {% for genre in movie.genres|slice:":3" %}
+          <span class="px-2 py-0.5 rounded bg-white/10 text-xs">{{ genre.name }}</span>
+          {% endfor %}
+        </div>
+      </div>
+      <a href="/movie/{{ movie.id }}/" class="text-sm text-white/40 hover:text-white transition">Back to details</a>
+    </div>
+
+    <!-- ==========================================
+         STEPPER
+         ========================================== -->
+    <div class="flex items-center justify-center mb-10">
+      <template x-for="(s, i) in steps" :key="i">
+        <div class="flex items-center">
+          <div class="flex flex-col items-center">
+            <div
+              :class="step > i + 1 ? 'step-completed text-white' : step === i + 1 ? 'step-active' : 'border-white/20 text-white/40'"
+              class="w-10 h-10 rounded-full border-2 flex items-center justify-center text-sm font-bold transition-all"
+            >
+              <template x-if="step > i + 1">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+              </template>
+              <template x-if="step <= i + 1">
+                <span x-text="i + 1"></span>
+              </template>
+            </div>
+            <span class="text-xs mt-1 hidden sm:block" :class="step === i + 1 ? 'text-[#e50914]' : 'text-white/40'" x-text="s"></span>
+          </div>
+          <template x-if="i < steps.length - 1">
+            <div :class="step > i + 1 ? 'bg-green-500' : 'bg-white/10'" class="w-12 sm:w-20 h-0.5 mx-2 transition-all"></div>
+          </template>
+        </div>
+      </template>
+    </div>
+
+    <!-- ==========================================
+         STEP 1: SELECT SHOWTIME
+         ========================================== -->
+    <div x-show="step === 1" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0">
+      <h2 class="text-xl font-bold mb-6 text-center">Select a Showtime</h2>
+
+      <template x-if="showtimes.length === 0">
+        <div class="text-center py-12 text-white/40">
+          <svg class="w-16 h-16 mx-auto mb-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <p class="text-lg">No showtimes available right now.</p>
+          <p class="text-sm mt-1">Check back later for new screenings.</p>
+        </div>
+      </template>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <template x-for="(show, i) in showtimes" :key="i">
+          <button
+            @click="selectedShowtime = show; step = 2"
+            :class="selectedShowtime === show ? 'ring-2 ring-[#e50914] bg-[#e50914]/10' : 'glass hover:bg-white/5'"
+            class="rounded-xl p-5 text-left transition-all"
+          >
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-lg font-bold" x-text="show.time"></span>
+              <span
+                :class="{
+                  'bg-purple-500/20 text-purple-400': show.type === 'IMAX',
+                  'bg-yellow-500/20 text-yellow-400': show.type === 'Gold',
+                  'bg-blue-500/20 text-blue-400': show.type === '4DX',
+                  'bg-white/10 text-white/60': !['IMAX','Gold','4DX'].includes(show.type)
+                }"
+                class="px-2 py-0.5 rounded text-xs font-medium"
+                x-text="show.type"
+              ></span>
+            </div>
+            <p class="text-sm text-white/50" x-text="show.screen"></p>
+            <p class="text-sm font-semibold text-[#e50914] mt-2" x-text="getShowtimePrice(show)"></p>
+          </button>
+        </template>
+      </div>
+    </div>
+
+    <!-- ==========================================
+         STEP 2: SELECT SEATS
+         ========================================== -->
+    <div x-show="step === 2" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0">
+      <h2 class="text-xl font-bold mb-2 text-center">Select Your Seats</h2>
+      <p class="text-sm text-white/40 text-center mb-6" x-text="selectedShowtime?.time + ' - ' + selectedShowtime?.type + ' - ' + selectedShowtime?.screen"></p>
+
+      <!-- Screen indicator -->
+      <div class="max-w-lg mx-auto mb-8">
+        <div class="h-1.5 bg-gradient-to-r from-transparent via-[#e50914] to-transparent rounded-full mb-2"></div>
+        <p class="text-center text-xs text-white/30 uppercase tracking-widest">Screen</p>
+      </div>
+
+      <!-- Seat Grid -->
+      <div class="max-w-lg mx-auto mb-8">
+        <template x-for="(row, ri) in seatRows" :key="'row-'+ri">
+          <div class="flex items-center justify-center gap-1.5 mb-1.5">
+            <span class="w-6 text-xs text-white/30 text-right" x-text="row"></span>
+            <template x-for="col in 12" :key="'seat-'+ri+'-'+col">
+              <button
+                @click="toggleSeat(row, col)"
+                :class="getSeatClass(row, col)"
+                class="w-7 h-7 sm:w-8 sm:h-8 rounded-t-lg text-xs font-medium transition-all"
+                :disabled="isSeatBooked(row, col)"
+                x-text="col"
+              ></button>
+            </template>
+            <span class="w-6 text-xs text-white/30" x-text="row"></span>
+          </div>
+        </template>
+      </div>
+
+      <!-- Legend -->
+      <div class="flex items-center justify-center gap-6 mb-6 text-xs text-white/50">
+        <div class="flex items-center gap-2"><div class="w-5 h-5 rounded-t-lg seat-available"></div> Available</div>
+        <div class="flex items-center gap-2"><div class="w-5 h-5 rounded-t-lg seat-selected"></div> Selected</div>
+        <div class="flex items-center gap-2"><div class="w-5 h-5 rounded-t-lg seat-booked"></div> Booked</div>
+      </div>
+
+      <!-- Selection Summary -->
+      <div class="glass rounded-xl p-4 max-w-lg mx-auto">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-sm text-white/60">Selected Seats</span>
+          <span class="text-sm font-medium" x-text="selectedSeats.length > 0 ? selectedSeats.map(s => s.row + s.col).join(', ') : 'None'"></span>
+        </div>
+        <div class="flex items-center justify-between mb-4">
+          <span class="text-sm text-white/60">Total</span>
+          <span class="text-lg font-bold text-[#e50914]" x-text="$store.region.formatPrice(totalPrice)"></span>
+        </div>
+        <div class="flex items-center gap-3">
+          <button @click="step = 1" class="flex-1 py-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-sm font-medium transition">Back</button>
+          <button
+            @click="step = 3"
+            :disabled="selectedSeats.length === 0"
+            class="flex-1 py-2.5 rounded-lg bg-[#e50914] hover:bg-[#b20710] disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium transition"
+          >Continue</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==========================================
+         STEP 3: CONFIRMATION
+         ========================================== -->
+    <div x-show="step === 3" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0">
+      <h2 class="text-xl font-bold mb-6 text-center">Confirm Your Booking</h2>
+
+      <div class="glass rounded-xl p-6 max-w-lg mx-auto space-y-4">
+        <div class="flex items-center justify-between py-2 border-b border-white/5">
+          <span class="text-white/50">Movie</span>
+          <span class="font-medium">{{ movie.title|default:"Movie" }}</span>
+        </div>
+        <div class="flex items-center justify-between py-2 border-b border-white/5">
+          <span class="text-white/50">Showtime</span>
+          <span class="font-medium" x-text="selectedShowtime?.time + ' - ' + selectedShowtime?.type"></span>
+        </div>
+        <div class="flex items-center justify-between py-2 border-b border-white/5">
+          <span class="text-white/50">Screen</span>
+          <span class="font-medium" x-text="selectedShowtime?.screen"></span>
+        </div>
+        <div class="flex items-center justify-between py-2 border-b border-white/5">
+          <span class="text-white/50">Seats</span>
+          <span class="font-medium" x-text="selectedSeats.map(s => s.row + s.col).join(', ')"></span>
+        </div>
+        <div class="flex items-center justify-between py-2 border-b border-white/5">
+          <span class="text-white/50">Tickets</span>
+          <span class="font-medium" x-text="selectedSeats.length"></span>
+        </div>
+
+        <!-- Name Input -->
+        <div class="pt-2">
+          <label class="block text-sm text-white/50 mb-1">Your Name</label>
+          <input
+            x-model="customerName"
+            type="text"
+            placeholder="Enter your name"
+            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white placeholder-white/30 focus:border-[#e50914]/50 transition"
+          >
+        </div>
+
+        <div class="flex items-center justify-between pt-4 border-t border-white/10">
+          <span class="text-lg font-bold">Total</span>
+          <span class="text-2xl font-extrabold text-[#e50914]" x-text="$store.region.formatPrice(totalPrice)"></span>
+        </div>
+
+        <div class="flex items-center gap-3 pt-2">
+          <button @click="step = 2" class="flex-1 py-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-sm font-medium transition">Back</button>
+          <button
+            @click="confirmBooking()"
+            :disabled="!customerName.trim()"
+            class="flex-1 py-2.5 rounded-lg bg-[#e50914] hover:bg-[#b20710] disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium transition"
+          >Confirm Booking</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==========================================
+         STEP 4: SUCCESS
+         ========================================== -->
+    <div x-show="step === 4" x-transition:enter="transition ease-out duration-500" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100">
+      <div class="glass rounded-2xl p-8 max-w-lg mx-auto text-center">
+        <div class="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-6">
+          <svg class="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        </div>
+        <h2 class="text-2xl font-extrabold mb-2">Booking Confirmed!</h2>
+        <p class="text-white/50 mb-6">Your tickets have been reserved successfully.</p>
+
+        <div class="glass rounded-xl p-4 mb-6 inline-block">
+          <p class="text-xs text-white/40 uppercase tracking-wider mb-1">Booking Code</p>
+          <p class="text-2xl font-mono font-bold text-[#e50914] tracking-wider" x-text="bookingCode"></p>
+        </div>
+
+        <div class="space-y-2 text-sm text-white/60 mb-8">
+          <p>Movie: <span class="text-white font-medium">{{ movie.title|default:"Movie" }}</span></p>
+          <p>Showtime: <span class="text-white font-medium" x-text="selectedShowtime?.time + ' - ' + selectedShowtime?.type"></span></p>
+          <p>Seats: <span class="text-white font-medium" x-text="selectedSeats.map(s => s.row + s.col).join(', ')"></span></p>
+          <p>Name: <span class="text-white font-medium" x-text="customerName"></span></p>
+          <p>Total: <span class="text-white font-bold" x-text="$store.region.formatPrice(totalPrice)"></span></p>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <a href="/" class="flex-1 py-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-sm font-medium transition text-center">Home</a>
+          <a href="/movie/{{ movie.id }}/" class="flex-1 py-2.5 rounded-lg bg-[#e50914] hover:bg-[#b20710] text-sm font-medium transition text-center">View Movie</a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function bookingData() {
+  return {
+    step: 1,
+    steps: ['Showtime', 'Seats', 'Confirm', 'Done'],
+    showtimes: [],
+    selectedShowtime: null,
+    seatRows: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'],
+    selectedSeats: [],
+    bookedSeats: [],
+    customerName: '',
+    bookingCode: '',
+
+    init() {
+      try {
+        this.showtimes = JSON.parse('{{ showtimes_json|default:"[]"|escapejs }}');
+      } catch(e) { this.showtimes = []; }
+
+      // If no showtimes from server, generate defaults
+      if (this.showtimes.length === 0) {
+        this.showtimes = [
+          { time: '10:30 AM', type: 'Gold', screen: 'Screen 1', price_key: 'gold' },
+          { time: '01:15 PM', type: 'IMAX', screen: 'Screen 2', price_key: 'imax' },
+          { time: '04:00 PM', type: 'Gold', screen: 'Screen 3', price_key: 'gold' },
+          { time: '06:45 PM', type: '4DX', screen: 'Screen 4', price_key: 'four_dx' },
+          { time: '09:30 PM', type: 'IMAX', screen: 'Screen 2', price_key: 'imax' },
+          { time: '11:00 PM', type: 'Gold', screen: 'Screen 1', price_key: 'gold' },
+        ];
+      }
+
+      // Generate random booked seats
+      const bookedCount = Math.floor(Math.random() * 20) + 10;
+      for (let i = 0; i < bookedCount; i++) {
+        const row = this.seatRows[Math.floor(Math.random() * this.seatRows.length)];
+        const col = Math.floor(Math.random() * 12) + 1;
+        this.bookedSeats.push({ row, col });
+      }
+    },
+
+    getShowtimePrice(show) {
+      const key = show.price_key || 'gold';
+      const price = Alpine.store('region').getTicketPrice(key);
+      return Alpine.store('region').formatPrice(price);
+    },
+
+    get totalPrice() {
+      if (!this.selectedShowtime || this.selectedSeats.length === 0) return 0;
+      const key = this.selectedShowtime.price_key || 'gold';
+      const unitPrice = Alpine.store('region').getTicketPrice(key);
+      return unitPrice * this.selectedSeats.length;
+    },
+
+    isSeatBooked(row, col) {
+      return this.bookedSeats.some(s => s.row === row && s.col === col);
+    },
+
+    isSeatSelected(row, col) {
+      return this.selectedSeats.some(s => s.row === row && s.col === col);
+    },
+
+    getSeatClass(row, col) {
+      if (this.isSeatBooked(row, col)) return 'seat-booked';
+      if (this.isSeatSelected(row, col)) return 'seat-selected';
+      return 'seat-available';
+    },
+
+    toggleSeat(row, col) {
+      if (this.isSeatBooked(row, col)) return;
+      const idx = this.selectedSeats.findIndex(s => s.row === row && s.col === col);
+      if (idx >= 0) {
+        this.selectedSeats.splice(idx, 1);
+      } else {
+        if (this.selectedSeats.length >= 10) return; // Max 10 seats
+        this.selectedSeats.push({ row, col });
+      }
+    },
+
+    confirmBooking() {
+      if (!this.customerName.trim()) return;
+      // Generate booking code
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      let code = 'PH-';
+      for (let i = 0; i < 6; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      this.bookingCode = code;
+      this.step = 4;
+
+      // Try to save booking on server (fire-and-forget)
+      fetch('/api/bookings/create/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCookie('csrftoken'),
+        },
+        body: JSON.stringify({
+          booking_code: this.bookingCode,
+          movie_id: {{ movie.id|default:0 }},
+          movie_title: '{{ movie.title|default:"Movie"|escapejs }}',
+          showtime: this.selectedShowtime?.time + ' - ' + this.selectedShowtime?.type,
+          seats: this.selectedSeats.map(s => s.row + s.col),
+          total_price: this.totalPrice,
+        }),
+      }).catch(() => {});
+    },
+  };
+}
+</script>
+{% endblock %}
