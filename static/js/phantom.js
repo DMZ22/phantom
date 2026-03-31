@@ -48,7 +48,9 @@ document.addEventListener('alpine:init', () => {
     setRegion(code) {
       this.code = code;
       localStorage.setItem('phantom_region', code);
-      window.location.reload();
+      const url = new URL(window.location.href);
+      url.searchParams.set('region', code);
+      window.location.href = url.toString();
     },
 
     formatPrice(amount) {
@@ -71,6 +73,21 @@ document.addEventListener('alpine:init', () => {
   });
 });
 
+
+// ============================================
+// Sync region from localStorage to URL on load
+// ============================================
+(function() {
+  const saved = localStorage.getItem('phantom_region');
+  if (saved) {
+    const url = new URL(window.location.href);
+    const current = url.searchParams.get('region');
+    if (current !== saved) {
+      url.searchParams.set('region', saved);
+      window.location.replace(url.toString());
+    }
+  }
+})();
 
 // ============================================
 // HTMX CSRF Configuration

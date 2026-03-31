@@ -114,13 +114,13 @@
             <span>Book Tickets</span>
           </a>
           {% if trailer_key %}
-          <a
-            href="#trailer"
+          <button
+            @click="document.getElementById('trailer').scrollIntoView({behavior:'smooth'}); $nextTick(() => { const sec = document.getElementById('trailer'); if(sec && sec._x_dataStack) sec._x_dataStack[0].playing = true; })"
             class="bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-lg font-semibold transition border border-white/10 flex items-center space-x-2"
           >
-            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"/></svg>
+            <svg class="w-5 h-5 text-[#e50914]" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"/></svg>
             <span>Watch Trailer</span>
-          </a>
+          </button>
           {% endif %}
           <button
             @click="ottModalOpen = true"
@@ -249,18 +249,90 @@
          TRAILER
          ========================================== -->
     {% if trailer_key %}
-    <section id="trailer" class="mt-12">
-      <h2 class="text-xl sm:text-2xl font-bold mb-4">Trailer</h2>
-      <div class="relative rounded-xl overflow-hidden aspect-video max-w-4xl bg-black">
-        <iframe
-          src="https://www.youtube.com/embed/{{ trailer_key }}"
-          title="Trailer"
-          class="absolute inset-0 w-full h-full"
-          frameborder="0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowfullscreen
-          loading="lazy"
-        ></iframe>
+    <section id="trailer" class="mt-12" x-data="{ playing: false, fullscreen: false }">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl sm:text-2xl font-bold">Trailer</h2>
+        <button
+          @click="fullscreen = true; playing = true"
+          class="text-sm text-white/50 hover:text-white flex items-center gap-1.5 transition"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
+          Fullscreen
+        </button>
+      </div>
+
+      <!-- Inline Player: Thumbnail + Click to Play -->
+      <div class="relative rounded-xl overflow-hidden aspect-video max-w-4xl bg-black group cursor-pointer"
+           @click="playing = true">
+        <!-- Thumbnail (shown before play) -->
+        <template x-if="!playing">
+          <div class="absolute inset-0">
+            <img
+              src="https://img.youtube.com/vi/{{ trailer_key }}/maxresdefault.jpg"
+              alt="Trailer thumbnail"
+              class="w-full h-full object-cover"
+              onerror="this.src='https://img.youtube.com/vi/{{ trailer_key }}/hqdefault.jpg'"
+            >
+            <!-- Dark overlay -->
+            <div class="absolute inset-0 bg-black/40 group-hover:bg-black/30 transition-colors"></div>
+            <!-- Play button -->
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div class="w-20 h-20 rounded-full bg-[#e50914] flex items-center justify-center shadow-lg shadow-[#e50914]/30 group-hover:scale-110 transition-transform">
+                <svg class="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+              </div>
+            </div>
+            <!-- Duration badge -->
+            <div class="absolute bottom-4 right-4 bg-black/70 text-white text-xs px-2 py-1 rounded font-mono">
+              Official Trailer
+            </div>
+          </div>
+        </template>
+        <!-- YouTube iframe (loaded on click) -->
+        <template x-if="playing">
+          <iframe
+            :src="'https://www.youtube.com/embed/{{ trailer_key }}?autoplay=1&rel=0&modestbranding=1&color=red&iv_load_policy=3&playsinline=1'"
+            title="Trailer"
+            class="absolute inset-0 w-full h-full"
+            frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowfullscreen
+          ></iframe>
+        </template>
+      </div>
+
+      <!-- Fullscreen Modal -->
+      <div
+        x-show="fullscreen"
+        x-transition:enter="transition ease-out duration-200"
+        x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100"
+        x-transition:leave="transition ease-in duration-150"
+        x-transition:leave-start="opacity-100"
+        x-transition:leave-end="opacity-0"
+        x-cloak
+        @keydown.escape.window="fullscreen = false"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-4 sm:p-8"
+      >
+        <!-- Close button -->
+        <button
+          @click="fullscreen = false"
+          class="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+        <!-- Fullscreen player -->
+        <div class="w-full max-w-6xl aspect-video rounded-xl overflow-hidden shadow-2xl">
+          <template x-if="fullscreen">
+            <iframe
+              :src="'https://www.youtube.com/embed/{{ trailer_key }}?autoplay=1&rel=0&modestbranding=1&color=red&iv_load_policy=3&playsinline=1'"
+              title="Trailer"
+              class="w-full h-full"
+              frameborder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowfullscreen
+            ></iframe>
+          </template>
+        </div>
       </div>
     </section>
     {% endif %}

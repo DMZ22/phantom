@@ -7,9 +7,7 @@
 <div class="pt-20 pb-10" x-data="bookingData()" x-init="init()">
   <div class="max-w-[1100px] mx-auto px-4 sm:px-6">
 
-    <!-- ==========================================
-         MOVIE SUMMARY
-         ========================================== -->
+    <!-- Movie Summary -->
     <div class="glass rounded-xl p-4 sm:p-6 mb-8 flex flex-col sm:flex-row items-center gap-4">
       <div class="w-20 sm:w-24 flex-shrink-0">
         <div class="rounded-lg overflow-hidden aspect-[2/3] bg-white/5">
@@ -31,9 +29,7 @@
       <a href="/movie/{{ movie.id }}/" class="text-sm text-white/40 hover:text-white transition">Back to details</a>
     </div>
 
-    <!-- ==========================================
-         STEPPER
-         ========================================== -->
+    <!-- Stepper -->
     <div class="flex items-center justify-center mb-10">
       <template x-for="(s, i) in steps" :key="i">
         <div class="flex items-center">
@@ -52,7 +48,7 @@
             <span class="text-xs mt-1 hidden sm:block" :class="step === i + 1 ? 'text-[#e50914]' : 'text-white/40'" x-text="s"></span>
           </div>
           <template x-if="i < steps.length - 1">
-            <div :class="step > i + 1 ? 'bg-green-500' : 'bg-white/10'" class="w-12 sm:w-20 h-0.5 mx-2 transition-all"></div>
+            <div :class="step > i + 1 ? 'bg-green-500' : 'bg-white/10'" class="w-10 sm:w-16 h-0.5 mx-1.5 transition-all"></div>
           </template>
         </div>
       </template>
@@ -68,7 +64,6 @@
         <div class="text-center py-12 text-white/40">
           <svg class="w-16 h-16 mx-auto mb-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
           <p class="text-lg">No showtimes available right now.</p>
-          <p class="text-sm mt-1">Check back later for new screenings.</p>
         </div>
       </template>
 
@@ -160,56 +155,174 @@
     </div>
 
     <!-- ==========================================
-         STEP 3: CONFIRMATION
+         STEP 3: PAYMENT
          ========================================== -->
     <div x-show="step === 3" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0">
-      <h2 class="text-xl font-bold mb-6 text-center">Confirm Your Booking</h2>
+      <h2 class="text-xl font-bold mb-6 text-center">Payment</h2>
 
-      <div class="glass rounded-xl p-6 max-w-lg mx-auto space-y-4">
-        <div class="flex items-center justify-between py-2 border-b border-white/5">
-          <span class="text-white/50">Movie</span>
-          <span class="font-medium">{{ movie.title|default:"Movie" }}</span>
-        </div>
-        <div class="flex items-center justify-between py-2 border-b border-white/5">
-          <span class="text-white/50">Showtime</span>
-          <span class="font-medium" x-text="selectedShowtime?.time + ' - ' + selectedShowtime?.type"></span>
-        </div>
-        <div class="flex items-center justify-between py-2 border-b border-white/5">
-          <span class="text-white/50">Screen</span>
-          <span class="font-medium" x-text="selectedShowtime?.screen"></span>
-        </div>
-        <div class="flex items-center justify-between py-2 border-b border-white/5">
-          <span class="text-white/50">Seats</span>
-          <span class="font-medium" x-text="selectedSeats.map(s => s.row + s.col).join(', ')"></span>
-        </div>
-        <div class="flex items-center justify-between py-2 border-b border-white/5">
-          <span class="text-white/50">Tickets</span>
-          <span class="font-medium" x-text="selectedSeats.length"></span>
+      <div class="max-w-lg mx-auto space-y-6">
+
+        <!-- Order Summary -->
+        <div class="glass rounded-xl p-5">
+          <h3 class="text-sm font-bold uppercase tracking-wider text-white/50 mb-3">Order Summary</h3>
+          <div class="space-y-2 text-sm">
+            <div class="flex justify-between"><span class="text-white/50">Movie</span><span>{{ movie.title|default:"Movie" }}</span></div>
+            <div class="flex justify-between"><span class="text-white/50">Showtime</span><span x-text="selectedShowtime?.time + ' - ' + selectedShowtime?.type"></span></div>
+            <div class="flex justify-between"><span class="text-white/50">Seats</span><span x-text="selectedSeats.map(s => s.row + s.col).join(', ')"></span></div>
+            <div class="flex justify-between"><span class="text-white/50">Tickets</span><span x-text="selectedSeats.length + ' x ' + getShowtimePrice(selectedShowtime)"></span></div>
+          </div>
+          <div class="border-t border-white/10 mt-3 pt-3 flex justify-between">
+            <span class="font-bold">Total</span>
+            <span class="text-xl font-extrabold text-[#e50914]" x-text="$store.region.formatPrice(totalPrice)"></span>
+          </div>
         </div>
 
-        <!-- Name Input -->
-        <div class="pt-2">
-          <label class="block text-sm text-white/50 mb-1">Your Name</label>
-          <input
-            x-model="customerName"
-            type="text"
-            placeholder="Enter your name"
-            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white placeholder-white/30 focus:border-[#e50914]/50 transition"
-          >
+        <!-- Payment Method Tabs -->
+        <div class="glass rounded-xl p-5">
+          <h3 class="text-sm font-bold uppercase tracking-wider text-white/50 mb-4">Payment Method</h3>
+
+          <div class="flex gap-2 mb-5">
+            <button @click="payMethod = 'card'" :class="payMethod === 'card' ? 'bg-[#e50914] text-white' : 'bg-white/10 text-white/60 hover:bg-white/15'" class="flex-1 py-2.5 rounded-lg text-sm font-medium transition flex items-center justify-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+              Card
+            </button>
+            <button @click="payMethod = 'upi'" :class="payMethod === 'upi' ? 'bg-[#e50914] text-white' : 'bg-white/10 text-white/60 hover:bg-white/15'" class="flex-1 py-2.5 rounded-lg text-sm font-medium transition flex items-center justify-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+              UPI
+            </button>
+            <button @click="payMethod = 'wallet'" :class="payMethod === 'wallet' ? 'bg-[#e50914] text-white' : 'bg-white/10 text-white/60 hover:bg-white/15'" class="flex-1 py-2.5 rounded-lg text-sm font-medium transition flex items-center justify-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+              Wallet
+            </button>
+          </div>
+
+          <!-- Card Form -->
+          <div x-show="payMethod === 'card'" x-transition class="space-y-3">
+            <div>
+              <label class="block text-xs text-white/40 mb-1">Card Number</label>
+              <input
+                x-model="cardNumber"
+                @input="formatCardNumber()"
+                type="text"
+                placeholder="1234 5678 9012 3456"
+                maxlength="19"
+                class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white placeholder-white/30 focus:border-[#e50914]/50 transition font-mono tracking-wider"
+              >
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs text-white/40 mb-1">Expiry</label>
+                <input
+                  x-model="cardExpiry"
+                  @input="formatExpiry()"
+                  type="text"
+                  placeholder="MM/YY"
+                  maxlength="5"
+                  class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white placeholder-white/30 focus:border-[#e50914]/50 transition font-mono"
+                >
+              </div>
+              <div>
+                <label class="block text-xs text-white/40 mb-1">CVV</label>
+                <input
+                  x-model="cardCvv"
+                  type="password"
+                  placeholder="***"
+                  maxlength="4"
+                  class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white placeholder-white/30 focus:border-[#e50914]/50 transition font-mono"
+                >
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs text-white/40 mb-1">Name on Card</label>
+              <input
+                x-model="customerName"
+                type="text"
+                placeholder="Enter cardholder name"
+                class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white placeholder-white/30 focus:border-[#e50914]/50 transition"
+              >
+            </div>
+          </div>
+
+          <!-- UPI Form -->
+          <div x-show="payMethod === 'upi'" x-transition class="space-y-3">
+            <div>
+              <label class="block text-xs text-white/40 mb-1">UPI ID</label>
+              <input
+                x-model="upiId"
+                type="text"
+                placeholder="yourname@upi"
+                class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white placeholder-white/30 focus:border-[#e50914]/50 transition"
+              >
+            </div>
+            <div>
+              <label class="block text-xs text-white/40 mb-1">Your Name</label>
+              <input
+                x-model="customerName"
+                type="text"
+                placeholder="Enter your name"
+                class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white placeholder-white/30 focus:border-[#e50914]/50 transition"
+              >
+            </div>
+            <div class="flex flex-wrap gap-2 pt-1">
+              <button @click="upiId = 'user@gpay'" class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-white/60 transition border border-white/10">Google Pay</button>
+              <button @click="upiId = 'user@paytm'" class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-white/60 transition border border-white/10">Paytm</button>
+              <button @click="upiId = 'user@phonepe'" class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-white/60 transition border border-white/10">PhonePe</button>
+              <button @click="upiId = 'user@amazonpay'" class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-white/60 transition border border-white/10">Amazon Pay</button>
+            </div>
+          </div>
+
+          <!-- Wallet Form -->
+          <div x-show="payMethod === 'wallet'" x-transition class="space-y-3">
+            <div>
+              <label class="block text-xs text-white/40 mb-1">Your Name</label>
+              <input
+                x-model="customerName"
+                type="text"
+                placeholder="Enter your name"
+                class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white placeholder-white/30 focus:border-[#e50914]/50 transition"
+              >
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <button @click="selectedWallet = 'paytm'" :class="selectedWallet === 'paytm' ? 'ring-2 ring-[#e50914] bg-[#e50914]/10' : 'bg-white/5 hover:bg-white/10'" class="p-4 rounded-lg text-center transition border border-white/10">
+                <div class="text-lg font-bold text-blue-400 mb-1">Paytm</div>
+                <div class="text-xs text-white/40">Wallet</div>
+              </button>
+              <button @click="selectedWallet = 'phonepe'" :class="selectedWallet === 'phonepe' ? 'ring-2 ring-[#e50914] bg-[#e50914]/10' : 'bg-white/5 hover:bg-white/10'" class="p-4 rounded-lg text-center transition border border-white/10">
+                <div class="text-lg font-bold text-purple-400 mb-1">PhonePe</div>
+                <div class="text-xs text-white/40">Wallet</div>
+              </button>
+              <button @click="selectedWallet = 'mobikwik'" :class="selectedWallet === 'mobikwik' ? 'ring-2 ring-[#e50914] bg-[#e50914]/10' : 'bg-white/5 hover:bg-white/10'" class="p-4 rounded-lg text-center transition border border-white/10">
+                <div class="text-lg font-bold text-red-400 mb-1">MobiKwik</div>
+                <div class="text-xs text-white/40">Wallet</div>
+              </button>
+              <button @click="selectedWallet = 'freecharge'" :class="selectedWallet === 'freecharge' ? 'ring-2 ring-[#e50914] bg-[#e50914]/10' : 'bg-white/5 hover:bg-white/10'" class="p-4 rounded-lg text-center transition border border-white/10">
+                <div class="text-lg font-bold text-green-400 mb-1">FreeCharge</div>
+                <div class="text-xs text-white/40">Wallet</div>
+              </button>
+            </div>
+          </div>
         </div>
 
-        <div class="flex items-center justify-between pt-4 border-t border-white/10">
-          <span class="text-lg font-bold">Total</span>
-          <span class="text-2xl font-extrabold text-[#e50914]" x-text="$store.region.formatPrice(totalPrice)"></span>
-        </div>
-
-        <div class="flex items-center gap-3 pt-2">
-          <button @click="step = 2" class="flex-1 py-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-sm font-medium transition">Back</button>
+        <!-- Pay Button -->
+        <div class="flex items-center gap-3">
+          <button @click="step = 2" class="flex-1 py-3 rounded-lg bg-white/10 hover:bg-white/20 text-sm font-medium transition">Back</button>
           <button
-            @click="confirmBooking()"
-            :disabled="!customerName.trim()"
-            class="flex-1 py-2.5 rounded-lg bg-[#e50914] hover:bg-[#b20710] disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium transition"
-          >Confirm Booking</button>
+            @click="processPayment()"
+            :disabled="!canPay || payProcessing"
+            class="flex-1 py-3 rounded-lg bg-[#e50914] hover:bg-[#b20710] disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium transition relative"
+          >
+            <span x-show="!payProcessing" x-text="'Pay ' + $store.region.formatPrice(totalPrice)"></span>
+            <span x-show="payProcessing" class="flex items-center justify-center gap-2">
+              <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+              Processing...
+            </span>
+          </button>
+        </div>
+
+        <!-- Security Badge -->
+        <div class="flex items-center justify-center gap-2 text-xs text-white/30">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+          <span>Secured with 256-bit SSL encryption</span>
         </div>
       </div>
     </div>
@@ -222,20 +335,21 @@
         <div class="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-6">
           <svg class="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
         </div>
-        <h2 class="text-2xl font-extrabold mb-2">Booking Confirmed!</h2>
-        <p class="text-white/50 mb-6">Your tickets have been reserved successfully.</p>
+        <h2 class="text-2xl font-extrabold mb-1">Payment Successful!</h2>
+        <p class="text-green-400 text-sm mb-4">Your tickets have been booked.</p>
 
         <div class="glass rounded-xl p-4 mb-6 inline-block">
           <p class="text-xs text-white/40 uppercase tracking-wider mb-1">Booking Code</p>
           <p class="text-2xl font-mono font-bold text-[#e50914] tracking-wider" x-text="bookingCode"></p>
         </div>
 
-        <div class="space-y-2 text-sm text-white/60 mb-8">
-          <p>Movie: <span class="text-white font-medium">{{ movie.title|default:"Movie" }}</span></p>
-          <p>Showtime: <span class="text-white font-medium" x-text="selectedShowtime?.time + ' - ' + selectedShowtime?.type"></span></p>
-          <p>Seats: <span class="text-white font-medium" x-text="selectedSeats.map(s => s.row + s.col).join(', ')"></span></p>
-          <p>Name: <span class="text-white font-medium" x-text="customerName"></span></p>
-          <p>Total: <span class="text-white font-bold" x-text="$store.region.formatPrice(totalPrice)"></span></p>
+        <div class="glass rounded-xl p-4 mb-6 text-left space-y-2 text-sm">
+          <div class="flex justify-between"><span class="text-white/50">Movie</span><span class="font-medium">{{ movie.title|default:"Movie" }}</span></div>
+          <div class="flex justify-between"><span class="text-white/50">Showtime</span><span class="font-medium" x-text="selectedShowtime?.time + ' - ' + selectedShowtime?.type"></span></div>
+          <div class="flex justify-between"><span class="text-white/50">Seats</span><span class="font-medium" x-text="selectedSeats.map(s => s.row + s.col).join(', ')"></span></div>
+          <div class="flex justify-between"><span class="text-white/50">Name</span><span class="font-medium" x-text="customerName"></span></div>
+          <div class="flex justify-between"><span class="text-white/50">Payment</span><span class="font-medium" x-text="payMethodLabel()"></span></div>
+          <div class="flex justify-between border-t border-white/10 pt-2 mt-2"><span class="font-bold">Total Paid</span><span class="font-bold text-green-400" x-text="$store.region.formatPrice(totalPrice)"></span></div>
         </div>
 
         <div class="flex items-center gap-3">
@@ -252,7 +366,7 @@
 function bookingData() {
   return {
     step: 1,
-    steps: ['Showtime', 'Seats', 'Confirm', 'Done'],
+    steps: ['Showtime', 'Seats', 'Payment', 'Done'],
     showtimes: [],
     selectedShowtime: null,
     seatRows: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'],
@@ -261,12 +375,20 @@ function bookingData() {
     customerName: '',
     bookingCode: '',
 
+    // Payment fields
+    payMethod: 'card',
+    cardNumber: '',
+    cardExpiry: '',
+    cardCvv: '',
+    upiId: '',
+    selectedWallet: '',
+    payProcessing: false,
+
     init() {
       try {
         this.showtimes = JSON.parse('{{ showtimes_json|default:"[]"|escapejs }}');
       } catch(e) { this.showtimes = []; }
 
-      // If no showtimes from server, generate defaults
       if (this.showtimes.length === 0) {
         this.showtimes = [
           { time: '10:30 AM', type: 'Gold', screen: 'Screen 1', price_key: 'gold' },
@@ -278,7 +400,6 @@ function bookingData() {
         ];
       }
 
-      // Generate random booked seats
       const bookedCount = Math.floor(Math.random() * 20) + 10;
       for (let i = 0; i < bookedCount; i++) {
         const row = this.seatRows[Math.floor(Math.random() * this.seatRows.length)];
@@ -288,6 +409,7 @@ function bookingData() {
     },
 
     getShowtimePrice(show) {
+      if (!show) return '';
       const key = show.price_key || 'gold';
       const price = Alpine.store('region').getTicketPrice(key);
       return Alpine.store('region').formatPrice(price);
@@ -320,38 +442,78 @@ function bookingData() {
       if (idx >= 0) {
         this.selectedSeats.splice(idx, 1);
       } else {
-        if (this.selectedSeats.length >= 10) return; // Max 10 seats
+        if (this.selectedSeats.length >= 10) return;
         this.selectedSeats.push({ row, col });
       }
     },
 
-    confirmBooking() {
-      if (!this.customerName.trim()) return;
-      // Generate booking code
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-      let code = 'PH-';
-      for (let i = 0; i < 6; i++) {
-        code += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
-      this.bookingCode = code;
-      this.step = 4;
+    // Card number formatting: 1234 5678 9012 3456
+    formatCardNumber() {
+      let v = this.cardNumber.replace(/\D/g, '').substring(0, 16);
+      this.cardNumber = v.replace(/(.{4})/g, '$1 ').trim();
+    },
 
-      // Try to save booking on server (fire-and-forget)
-      fetch('/api/bookings/create/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': getCookie('csrftoken'),
-        },
-        body: JSON.stringify({
-          booking_code: this.bookingCode,
-          movie_id: {{ movie.id|default:0 }},
-          movie_title: '{{ movie.title|default:"Movie"|escapejs }}',
-          showtime: this.selectedShowtime?.time + ' - ' + this.selectedShowtime?.type,
-          seats: this.selectedSeats.map(s => s.row + s.col),
-          total_price: this.totalPrice,
-        }),
-      }).catch(() => {});
+    // Expiry formatting: MM/YY
+    formatExpiry() {
+      let v = this.cardExpiry.replace(/\D/g, '').substring(0, 4);
+      if (v.length >= 2) v = v.substring(0, 2) + '/' + v.substring(2);
+      this.cardExpiry = v;
+    },
+
+    get canPay() {
+      if (!this.customerName.trim()) return false;
+      if (this.payMethod === 'card') {
+        return this.cardNumber.replace(/\s/g, '').length >= 13 && this.cardExpiry.length === 5 && this.cardCvv.length >= 3;
+      }
+      if (this.payMethod === 'upi') {
+        return this.upiId.includes('@');
+      }
+      if (this.payMethod === 'wallet') {
+        return this.selectedWallet !== '';
+      }
+      return false;
+    },
+
+    payMethodLabel() {
+      if (this.payMethod === 'card') return 'Card ending ' + this.cardNumber.slice(-4);
+      if (this.payMethod === 'upi') return 'UPI - ' + this.upiId;
+      if (this.payMethod === 'wallet') return this.selectedWallet.charAt(0).toUpperCase() + this.selectedWallet.slice(1) + ' Wallet';
+      return '';
+    },
+
+    processPayment() {
+      if (!this.canPay || this.payProcessing) return;
+      this.payProcessing = true;
+
+      // Simulate payment processing
+      setTimeout(() => {
+        // Generate booking code
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let code = 'PH-';
+        for (let i = 0; i < 6; i++) {
+          code += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        this.bookingCode = code;
+        this.payProcessing = false;
+        this.step = 4;
+
+        // Save booking on server
+        fetch('/api/bookings/create/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken'),
+          },
+          body: JSON.stringify({
+            booking_code: this.bookingCode,
+            movie_id: {{ movie.id|default:0 }},
+            movie_title: '{{ movie.title|default:"Movie"|escapejs }}',
+            showtime: this.selectedShowtime?.time + ' - ' + this.selectedShowtime?.type,
+            seats: this.selectedSeats.map(s => s.row + s.col),
+            total_price: this.totalPrice,
+          }),
+        }).catch(() => {});
+      }, 2000);
     },
   };
 }

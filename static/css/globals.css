@@ -145,6 +145,34 @@ body {
 }
 
 /* ============================================
+   Nav Hover Glow
+   ============================================ */
+.nav-glow {
+  position: relative;
+  padding: 4px 0;
+}
+
+.nav-glow::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: #e50914;
+  box-shadow: 0 0 8px rgba(229, 9, 20, 0.6), 0 0 16px rgba(229, 9, 20, 0.3);
+  transition: width 0.3s ease;
+}
+
+.nav-glow:hover::after {
+  width: 100%;
+}
+
+.nav-glow:hover {
+  text-shadow: 0 0 8px rgba(229, 9, 20, 0.4);
+}
+
+/* ============================================
    Chat Typing Indicator
    ============================================ */
 @keyframes typingBounce {

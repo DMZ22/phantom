@@ -82,13 +82,27 @@
       </template>
     </div>
 
-    <!-- Empty state -->
+    <!-- Empty state / API error -->
     <template x-if="heroMovies.length === 0">
       <div class="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-[#1a1a1a] to-[#0a0a0a]">
         <div class="text-center space-y-4">
-          <div class="text-6xl">🎬</div>
-          <h2 class="text-2xl font-bold">Welcome to Phantom</h2>
-          <p class="text-white/50">Discover trending movies from around the world</p>
+          <template x-if="apiError">
+            <div>
+              <svg class="w-16 h-16 mx-auto text-[#e50914]/60 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01M3.066 17.812A2 2 0 004.932 20h14.136a2 2 0 001.866-2.188L13.866 4.188a2 2 0 00-3.732 0L3.066 17.812z"/></svg>
+              <h2 class="text-2xl font-bold">Connection Issue</h2>
+              <p class="text-white/50 mt-1">Couldn't load movies from TMDB. This is usually temporary.</p>
+              <button @click="window.location.reload()" class="mt-4 bg-[#e50914] hover:bg-[#b20710] text-white px-6 py-2.5 rounded-lg font-semibold transition">
+                Retry
+              </button>
+            </div>
+          </template>
+          <template x-if="!apiError">
+            <div>
+              <svg class="w-16 h-16 mx-auto text-white/20 mb-2" fill="currentColor" viewBox="0 0 24 24"><path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z"/></svg>
+              <h2 class="text-2xl font-bold">Welcome to Phantom</h2>
+              <p class="text-white/50">Discover trending movies from around the world</p>
+            </div>
+          </template>
         </div>
       </div>
     </template>
@@ -175,6 +189,52 @@
               <!-- Rank Number -->
               <div class="absolute -left-2 -bottom-2 z-10 text-7xl font-black text-white/10 leading-none select-none" x-text="idx + 1" style="font-family: Inter, sans-serif;"></div>
               <div class="relative rounded-lg overflow-hidden aspect-[2/3] bg-white/5">
+                <img
+                  :src="movie.poster_path ? 'https://image.tmdb.org/t/p/w500' + movie.poster_path : ''"
+                  :alt="movie.title"
+                  class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  loading="lazy"
+                >
+                <div class="absolute inset-0 card-gradient opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <div class="absolute bottom-0 left-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <p class="text-sm font-semibold truncate" x-text="movie.title"></p>
+                </div>
+                <div class="absolute top-2 right-2">
+                  <span
+                    :class="movie.vote_average >= 7 ? 'bg-green-600' : movie.vote_average >= 5 ? 'bg-yellow-600' : 'bg-red-600'"
+                    class="text-xs font-bold px-1.5 py-0.5 rounded"
+                    x-text="movie.vote_average?.toFixed(1)"
+                  ></span>
+                </div>
+              </div>
+              <p class="mt-2 text-sm text-white/70 truncate group-hover:text-white transition" x-text="movie.title"></p>
+            </a>
+          </template>
+        </div>
+      </div>
+    </section>
+
+    <!-- Recommended For You (ML-powered) -->
+    <section class="max-w-[1400px] mx-auto px-4 sm:px-6" x-show="recommendedMovies.length > 0">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center space-x-3">
+          <h2 class="text-xl sm:text-2xl font-bold">Recommended For You</h2>
+          <span class="px-2 py-0.5 rounded-full bg-[#e50914]/20 text-[#e50914] text-xs font-medium">ML</span>
+        </div>
+        <div class="flex items-center space-x-1">
+          <button @click="scrollRow($el, 'left')" class="p-2 rounded-full hover:bg-white/10 transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+          </button>
+          <button @click="scrollRow($el, 'right')" class="p-2 rounded-full hover:bg-white/10 transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="overflow-x-auto hide-scrollbar">
+        <div class="flex space-x-4 pb-4">
+          <template x-for="movie in recommendedMovies" :key="'rec-'+movie.id">
+            <a :href="'/movie/' + movie.id + '/'" class="flex-shrink-0 w-40 sm:w-48 group">
+              <div class="relative rounded-lg overflow-hidden aspect-[2/3] bg-white/5 ring-1 ring-[#e50914]/20">
                 <img
                   :src="movie.poster_path ? 'https://image.tmdb.org/t/p/w500' + movie.poster_path : ''"
                   :alt="movie.title"
@@ -300,6 +360,8 @@ function homeData() {
     topRatedMovies: [],
     nowPlayingMovies: [],
     popularMovies: [],
+    recommendedMovies: [],
+    apiError: false,
     topPeriod: 'week',
     _interval: null,
 
@@ -320,6 +382,11 @@ function homeData() {
       try {
         this.popularMovies = JSON.parse('{{ popular_json|escapejs }}' || '[]');
       } catch(e) { this.popularMovies = []; }
+      try {
+        this.recommendedMovies = JSON.parse('{{ recommended_json|escapejs }}' || '[]');
+      } catch(e) { this.recommendedMovies = []; }
+
+      this.apiError = {{ api_error|yesno:"true,false" }};
 
       // Auto-rotate hero
       if (this.heroMovies.length > 1) {
@@ -335,7 +402,13 @@ function homeData() {
         const region = this.$store.region.code;
         const res = await fetch(`/api/movies/trending/?window=${period}&region=${region}`);
         const data = await res.json();
-        if (data.results) {
+        if (data.error) {
+          // Retry once after 1 second
+          await new Promise(r => setTimeout(r, 1000));
+          const retry = await fetch(`/api/movies/trending/?window=${period}&region=${region}`);
+          const retryData = await retry.json();
+          if (retryData.results) this.topRatedMovies = retryData.results.slice(0, 10);
+        } else if (data.results) {
           this.topRatedMovies = data.results.slice(0, 10);
         }
       } catch(e) {

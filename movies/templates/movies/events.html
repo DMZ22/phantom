@@ -11,14 +11,12 @@
     <div class="mb-8">
       <h1 class="text-3xl sm:text-4xl font-extrabold">Live Events</h1>
       <p class="text-white/50 mt-1">
-        Operas, plays, concerts and more in
+        Concerts, theatre, comedy and more in
         <span class="text-[#e50914]" x-text="$store.region.currentRegion.name"></span>
       </p>
     </div>
 
-    <!-- ==========================================
-         FILTER BAR
-         ========================================== -->
+    <!-- Filter Bar -->
     <div class="flex items-center space-x-2 mb-8 overflow-x-auto hide-scrollbar pb-1">
       <template x-for="cat in categories" :key="cat.value">
         <button
@@ -30,51 +28,50 @@
       </template>
     </div>
 
-    <!-- ==========================================
-         EVENT CARDS
-         ========================================== -->
+    <!-- Event Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
       <template x-for="event in filteredEvents" :key="event.id">
         <div
           @click="openEvent(event)"
           class="group cursor-pointer rounded-2xl overflow-hidden glass hover:scale-[1.02] transition-all duration-300"
         >
-          <!-- Card Image / Gradient -->
-          <div class="relative h-48 overflow-hidden">
+          <!-- Poster Image -->
+          <div class="relative h-56 overflow-hidden">
+            <img
+              :src="event.image"
+              :alt="event.title"
+              class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+              onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+            >
+            <!-- Fallback gradient if image fails -->
             <div
-              class="absolute inset-0"
-              :class="{
-                'bg-gradient-to-br from-purple-900/80 to-purple-600/40': event.type === 'opera',
-                'bg-gradient-to-br from-blue-900/80 to-blue-600/40': event.type === 'play',
-                'bg-gradient-to-br from-yellow-900/80 to-yellow-600/40': event.type === 'comedy',
-                'bg-gradient-to-br from-green-900/80 to-green-600/40': event.type === 'concert',
-                'bg-gradient-to-br from-pink-900/80 to-pink-600/40': event.type === 'musical',
-              }"
-            ></div>
-            <div class="absolute inset-0 flex items-center justify-center">
-              <span class="text-6xl opacity-30" x-text="typeEmoji(event.type)"></span>
+              class="absolute inset-0 items-center justify-center hidden"
+              :class="categoryGradient(event.category)"
+            >
+              <span class="text-6xl opacity-40" x-text="categoryEmoji(event.category)"></span>
             </div>
+            <!-- Dark overlay on image -->
+            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+            <!-- Category badge -->
             <div class="absolute top-3 left-3">
               <span
-                :class="{
-                  'bg-purple-500': event.type === 'opera',
-                  'bg-blue-500': event.type === 'play',
-                  'bg-yellow-500 text-black': event.type === 'comedy',
-                  'bg-green-500': event.type === 'concert',
-                  'bg-pink-500': event.type === 'musical',
-                }"
+                :class="categoryBadgeColor(event.category)"
                 class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider"
-                x-text="event.type"
+                x-text="event.category"
               ></span>
             </div>
+            <!-- Price badge -->
             <div class="absolute bottom-3 right-3 glass rounded-lg px-3 py-1.5">
-              <span class="text-sm font-bold" x-text="$store.region.formatPrice($store.region.convertFromUSD(event.price_usd))"></span>
+              <span class="text-sm font-bold text-[#e50914]" x-text="event.price + ' onwards'"></span>
+            </div>
+            <!-- Title overlay -->
+            <div class="absolute bottom-3 left-3 right-16">
+              <h3 class="text-lg font-bold leading-tight drop-shadow-lg" x-text="event.title"></h3>
             </div>
           </div>
 
           <!-- Card Body -->
-          <div class="p-5 space-y-2">
-            <h3 class="text-lg font-bold group-hover:text-[#e50914] transition" x-text="event.title"></h3>
+          <div class="p-4 space-y-2">
             <p class="text-sm text-white/50 line-clamp-2" x-text="event.description"></p>
             <div class="flex items-center justify-between pt-2">
               <div class="flex items-center space-x-2 text-xs text-white/40">
@@ -83,12 +80,20 @@
               </div>
               <div class="flex items-center space-x-2 text-xs text-white/40">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                <span x-text="event.venue"></span>
+                <span class="truncate max-w-[120px]" x-text="event.venue"></span>
               </div>
             </div>
-            <div class="flex items-center space-x-2 text-xs text-white/40">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-              <span x-text="event.time + ' (' + event.duration + ')'"></span>
+            <div class="flex items-center space-x-4 text-xs text-white/40">
+              <div class="flex items-center space-x-1">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span x-text="event.time"></span>
+              </div>
+              <template x-if="event.duration">
+                <div class="flex items-center space-x-1">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                  <span x-text="event.duration"></span>
+                </div>
+              </template>
             </div>
           </div>
         </div>
@@ -100,13 +105,11 @@
       <div class="text-center py-20">
         <div class="text-6xl mb-4 opacity-30">🎭</div>
         <p class="text-xl font-bold text-white/40">No events found</p>
-        <p class="text-sm text-white/30 mt-1">Try selecting a different category</p>
+        <p class="text-sm text-white/30 mt-1">Try selecting a different category or region</p>
       </div>
     </template>
 
-    <!-- ==========================================
-         EVENT DETAIL MODAL
-         ========================================== -->
+    <!-- Event Detail Modal -->
     <div
       x-show="modalOpen"
       x-transition:enter="transition ease-out duration-300"
@@ -128,40 +131,28 @@
       >
         <template x-if="selectedEvent">
           <div>
-            <!-- Modal Header Gradient -->
-            <div class="relative h-32 rounded-t-2xl overflow-hidden">
-              <div
-                class="absolute inset-0"
-                :class="{
-                  'bg-gradient-to-br from-purple-900 to-purple-600/50': selectedEvent.type === 'opera',
-                  'bg-gradient-to-br from-blue-900 to-blue-600/50': selectedEvent.type === 'play',
-                  'bg-gradient-to-br from-yellow-900 to-yellow-600/50': selectedEvent.type === 'comedy',
-                  'bg-gradient-to-br from-green-900 to-green-600/50': selectedEvent.type === 'concert',
-                  'bg-gradient-to-br from-pink-900 to-pink-600/50': selectedEvent.type === 'musical',
-                }"
-              ></div>
-              <div class="absolute inset-0 flex items-center justify-center">
-                <span class="text-5xl opacity-40" x-text="typeEmoji(selectedEvent.type)"></span>
-              </div>
+            <!-- Modal Header Image -->
+            <div class="relative h-48 rounded-t-2xl overflow-hidden">
+              <img
+                :src="selectedEvent.image"
+                :alt="selectedEvent.title"
+                class="w-full h-full object-cover"
+                onerror="this.style.display='none'"
+              >
+              <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
               <button @click="closeModal()" class="absolute top-3 right-3 p-2 rounded-full glass hover:bg-white/20 transition">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
               </button>
+              <div class="absolute bottom-3 left-4">
+                <span
+                  :class="categoryBadgeColor(selectedEvent.category)"
+                  class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider"
+                  x-text="selectedEvent.category"
+                ></span>
+              </div>
             </div>
 
             <div class="p-6 space-y-4">
-              <div>
-                <span
-                  :class="{
-                    'bg-purple-500': selectedEvent.type === 'opera',
-                    'bg-blue-500': selectedEvent.type === 'play',
-                    'bg-yellow-500 text-black': selectedEvent.type === 'comedy',
-                    'bg-green-500': selectedEvent.type === 'concert',
-                    'bg-pink-500': selectedEvent.type === 'musical',
-                  }"
-                  class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider"
-                  x-text="selectedEvent.type"
-                ></span>
-              </div>
               <h2 class="text-2xl font-extrabold" x-text="selectedEvent.title"></h2>
               <p class="text-white/60 text-sm leading-relaxed" x-text="selectedEvent.description"></p>
 
@@ -189,10 +180,9 @@
                 <div class="space-y-4 pt-2">
                   <div class="flex items-center justify-between">
                     <span class="text-white/60">Price per ticket</span>
-                    <span class="text-lg font-bold text-[#e50914]" x-text="$store.region.formatPrice($store.region.convertFromUSD(selectedEvent.price_usd))"></span>
+                    <span class="text-lg font-bold text-[#e50914]" x-text="selectedEvent.price + ' onwards'"></span>
                   </div>
 
-                  <!-- Ticket Quantity -->
                   <div class="flex items-center justify-between">
                     <span class="text-white/60">Tickets</span>
                     <div class="flex items-center space-x-3">
@@ -203,11 +193,10 @@
                   </div>
 
                   <div class="flex items-center justify-between pt-2 border-t border-white/10">
-                    <span class="font-bold">Total</span>
+                    <span class="font-bold">Total (approx)</span>
                     <span class="text-xl font-extrabold text-[#e50914]" x-text="$store.region.formatPrice($store.region.convertFromUSD(selectedEvent.price_usd) * evTickets)"></span>
                   </div>
 
-                  <!-- Name -->
                   <input
                     x-model="evName"
                     type="text"
@@ -239,7 +228,6 @@
                   <div class="text-sm text-white/50 space-y-1">
                     <p>Event: <span class="text-white" x-text="selectedEvent.title"></span></p>
                     <p>Tickets: <span class="text-white" x-text="evTickets"></span></p>
-                    <p>Total: <span class="text-white font-bold" x-text="$store.region.formatPrice($store.region.convertFromUSD(selectedEvent.price_usd) * evTickets)"></span></p>
                   </div>
                   <button @click="closeModal()" class="mt-2 bg-white/10 hover:bg-white/20 px-6 py-2 rounded-lg text-sm font-medium transition">Close</button>
                 </div>
@@ -258,12 +246,11 @@ function eventsData() {
   return {
     activeCategory: 'all',
     categories: [
-      { value: 'all', label: 'All' },
-      { value: 'opera', label: 'Opera' },
-      { value: 'play', label: 'Plays' },
-      { value: 'musical', label: 'Musicals' },
-      { value: 'comedy', label: 'Comedy' },
-      { value: 'concert', label: 'Concerts' },
+      { value: 'all', label: 'All Events' },
+      { value: 'Music', label: 'Concerts' },
+      { value: 'Theatre', label: 'Theatre' },
+      { value: 'Comedy', label: 'Comedy' },
+      { value: 'Festival', label: 'Festivals' },
     ],
     events: [],
     modalOpen: false,
@@ -277,34 +264,36 @@ function eventsData() {
       try {
         this.events = JSON.parse('{{ events_json|default:"[]"|escapejs }}');
       } catch(e) { this.events = []; }
-
-      // Fallback default events if none provided
-      if (this.events.length === 0) {
-        this.events = [
-          { id: 1, type: 'opera', title: 'La Traviata', description: 'Verdi\'s timeless masterpiece about love and sacrifice in 19th-century Paris. A beautifully staged production with world-class sopranos and a full orchestra.', date: 'Apr 15, 2026', time: '7:30 PM', venue: 'Grand Opera House', duration: '2h 45m', price_usd: 85 },
-          { id: 2, type: 'play', title: 'The Glass Menagerie', description: 'Tennessee Williams\' hauntingly beautiful memory play. A fragile family struggles with dreams and reality in depression-era St. Louis.', date: 'Apr 18, 2026', time: '8:00 PM', venue: 'City Theater', duration: '2h 10m', price_usd: 55 },
-          { id: 3, type: 'musical', title: 'Phantom of the Opera', description: 'The legendary Andrew Lloyd Webber musical returns with stunning new staging, costumes and effects. Experience the chandelier crash like never before.', date: 'Apr 20, 2026', time: '7:00 PM', venue: 'Royal Theater', duration: '2h 30m', price_usd: 95 },
-          { id: 4, type: 'comedy', title: 'Stand-Up Spectacular', description: 'An evening of non-stop laughter featuring five of the hottest comedians touring this year. Expect sharp wit, wild stories and plenty of crowd work.', date: 'Apr 22, 2026', time: '9:00 PM', venue: 'Comedy Cellar', duration: '2h', price_usd: 40 },
-          { id: 5, type: 'concert', title: 'Symphony Under Stars', description: 'The city philharmonic performs Beethoven\'s 9th Symphony in a stunning open-air venue. Bring blankets and enjoy classical music under the night sky.', date: 'Apr 25, 2026', time: '8:30 PM', venue: 'Starlight Amphitheater', duration: '2h 15m', price_usd: 65 },
-          { id: 6, type: 'opera', title: 'Carmen', description: 'Bizet\'s fiery opera of passion and jealousy set in Seville. This new production features breathtaking sets and a powerhouse mezzo-soprano in the title role.', date: 'Apr 28, 2026', time: '7:30 PM', venue: 'Grand Opera House', duration: '3h', price_usd: 90 },
-          { id: 7, type: 'play', title: 'Waiting for Godot', description: 'Beckett\'s absurdist masterpiece. Two men wait endlessly for someone who may never arrive, in a production that\'s both hilarious and deeply moving.', date: 'May 2, 2026', time: '7:30 PM', venue: 'Black Box Theater', duration: '2h', price_usd: 45 },
-          { id: 8, type: 'concert', title: 'Jazz Night Live', description: 'An intimate evening of world-class jazz featuring a rotating lineup of saxophone, piano, bass and drums. Cocktails and canapes included with your ticket.', date: 'May 5, 2026', time: '9:00 PM', venue: 'Blue Note Lounge', duration: '2h 30m', price_usd: 70 },
-          { id: 9, type: 'musical', title: 'West Side Story', description: 'The Bernstein and Sondheim classic reimagined for a modern audience. Electrifying choreography and a live orchestra bring this love story to life.', date: 'May 8, 2026', time: '7:00 PM', venue: 'Royal Theater', duration: '2h 40m', price_usd: 80 },
-          { id: 10, type: 'comedy', title: 'Improv All-Stars', description: 'No scripts, no safety net. The best improvisers in the city take your suggestions and spin them into comedy gold. Every show is completely unique.', date: 'May 10, 2026', time: '8:30 PM', venue: 'Comedy Cellar', duration: '1h 30m', price_usd: 35 },
-          { id: 11, type: 'concert', title: 'Electronic Nights', description: 'A pulsating electronic music experience with immersive visuals, laser shows, and sets from internationally acclaimed DJs. Dance until dawn.', date: 'May 12, 2026', time: '10:00 PM', venue: 'The Warehouse', duration: '4h', price_usd: 50 },
-          { id: 12, type: 'play', title: 'Hamlet', description: 'Shakespeare\'s greatest tragedy receives a bold modern staging. A young prince wrestles with duty, madness, and revenge in a corrupt kingdom.', date: 'May 15, 2026', time: '7:00 PM', venue: 'City Theater', duration: '3h', price_usd: 60 },
-        ];
-      }
     },
 
     get filteredEvents() {
       if (this.activeCategory === 'all') return this.events;
-      return this.events.filter(e => e.type === this.activeCategory);
+      return this.events.filter(e => e.category === this.activeCategory);
     },
 
-    typeEmoji(type) {
-      const map = { opera: '🎭', play: '🎪', musical: '🎵', comedy: '😂', concert: '🎶' };
-      return map[type] || '🎭';
+    categoryEmoji(cat) {
+      const map = { Music: '🎶', Theatre: '🎭', Comedy: '😂', Festival: '🎪' };
+      return map[cat] || '🎭';
+    },
+
+    categoryGradient(cat) {
+      const map = {
+        Music: 'bg-gradient-to-br from-green-900/80 to-green-600/40',
+        Theatre: 'bg-gradient-to-br from-purple-900/80 to-purple-600/40',
+        Comedy: 'bg-gradient-to-br from-yellow-900/80 to-yellow-600/40',
+        Festival: 'bg-gradient-to-br from-pink-900/80 to-pink-600/40',
+      };
+      return map[cat] || 'bg-gradient-to-br from-gray-900/80 to-gray-600/40';
+    },
+
+    categoryBadgeColor(cat) {
+      const map = {
+        Music: 'bg-green-500',
+        Theatre: 'bg-purple-500',
+        Comedy: 'bg-yellow-500 text-black',
+        Festival: 'bg-pink-500',
+      };
+      return map[cat] || 'bg-gray-500';
     },
 
     openEvent(event) {
