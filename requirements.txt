@@ -1,4 +1,7 @@
 django>=5.0
 python-dotenv
 requests
-anthropic
+scikit-learn
+numpy
+gunicorn
+whitenoise

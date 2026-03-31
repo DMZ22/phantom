@@ -9,107 +9,156 @@
 
     <!-- Search Header -->
     <div class="mb-8">
-      {% if query %}
-      <p class="text-white/40 text-sm mb-1">Search results for</p>
-      <h1 class="text-3xl sm:text-4xl font-extrabold">"{{ query }}"</h1>
-      <p class="text-white/50 mt-2" x-show="movies.length > 0">
-        Found <span class="text-white" x-text="totalResults"></span> results
-      </p>
-      {% else %}
       <h1 class="text-3xl sm:text-4xl font-extrabold">Search Movies</h1>
       <p class="text-white/50 mt-1">Find your next favorite film</p>
-      {% endif %}
     </div>
 
-    <!-- Search Form -->
-    <form action="/search/" method="GET" class="mb-10">
-      <div class="flex items-center gap-3 max-w-2xl">
-        <div class="flex-1 relative">
-          <svg class="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-          </svg>
-          <input
-            type="text"
-            name="q"
-            value="{{ query|default:'' }}"
-            placeholder="Search by title, actor, director..."
-            class="w-full bg-white/10 border border-white/10 rounded-xl pl-12 pr-4 py-3 text-white placeholder-white/30 focus:border-[#e50914]/50 transition"
-            autocomplete="off"
-          >
-        </div>
-        <button type="submit" class="bg-[#e50914] hover:bg-[#b20710] text-white px-6 py-3 rounded-xl font-semibold transition">
-          Search
+    <!-- Live Search Input -->
+    <div class="mb-10 max-w-2xl">
+      <div class="relative">
+        <svg class="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        </svg>
+        <input
+          type="text"
+          x-model="query"
+          @input.debounce.400ms="liveSearch()"
+          @keydown.enter.prevent="liveSearch()"
+          placeholder="Search by title, actor, director..."
+          class="w-full bg-white/10 border border-white/10 rounded-xl pl-12 pr-12 py-3.5 text-white placeholder-white/30 focus:border-[#e50914]/50 transition text-lg"
+          autocomplete="off"
+          x-ref="searchInput"
+        >
+        <!-- Clear button -->
+        <button
+          x-show="query.length > 0"
+          @click="query = ''; movies = []; searchRecs = []; totalResults = 0; window.history.replaceState({}, '', '/search/')"
+          class="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 hover:text-white transition"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
       </div>
-    </form>
+      <!-- Result count -->
+      <p x-show="query && movies.length > 0 && !loading" class="text-white/40 text-sm mt-3">
+        Found <span class="text-white font-medium" x-text="totalResults"></span> results for "<span class="text-white" x-text="query"></span>"
+      </p>
+    </div>
+
+    <!-- Loading -->
+    <div x-show="loading" class="flex justify-center py-10">
+      <div class="w-8 h-8 border-2 border-[#e50914] border-t-transparent rounded-full animate-spin"></div>
+    </div>
+
+    <!-- API Error -->
+    <div x-show="error && !loading" x-transition class="mb-8 max-w-2xl">
+      <div class="bg-red-500/10 border border-red-500/20 rounded-xl px-6 py-5 flex items-start gap-4">
+        <svg class="w-6 h-6 text-[#e50914] flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M3.066 17.812A2 2 0 004.932 20h14.136a2 2 0 001.866-2.188L13.866 4.188a2 2 0 00-3.732 0L3.066 17.812z"/></svg>
+        <div class="flex-1">
+          <p class="text-sm text-white/80" x-text="error"></p>
+          <button @click="liveSearch()" class="mt-2 text-[#e50914] hover:text-[#ff1a25] text-sm font-medium transition">
+            Try again
+          </button>
+        </div>
+      </div>
+    </div>
 
     <!-- Results Grid -->
-    <div x-show="movies.length > 0" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6">
-      <template x-for="movie in movies" :key="movie.id">
-        <a :href="'/movie/' + movie.id + '/'" class="group">
-          <div class="relative rounded-lg overflow-hidden aspect-[2/3] bg-white/5">
-            <img
-              :src="movie.poster_path ? 'https://image.tmdb.org/t/p/w500' + movie.poster_path : ''"
-              :alt="movie.title"
-              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              loading="lazy"
-            >
-            <div class="absolute inset-0 card-gradient opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <div class="absolute bottom-0 left-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              <p class="text-xs text-white/60 line-clamp-2" x-text="movie.overview"></p>
+    <div x-show="movies.length > 0 && !loading">
+      <h2 class="text-xl font-bold mb-4" x-show="query">Search Results</h2>
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6">
+        <template x-for="movie in movies" :key="'sr-'+movie.id">
+          <a :href="'/movie/' + movie.id + '/'" class="group">
+            <div class="relative rounded-lg overflow-hidden aspect-[2/3] bg-white/5">
+              <img
+                :src="movie.poster_path ? 'https://image.tmdb.org/t/p/w500' + movie.poster_path : ''"
+                :alt="movie.title"
+                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                loading="lazy"
+              >
+              <div class="absolute inset-0 card-gradient opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div class="absolute bottom-0 left-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <p class="text-xs text-white/60 line-clamp-2" x-text="movie.overview"></p>
+              </div>
+              <div class="absolute top-2 right-2" x-show="movie.vote_average > 0">
+                <span
+                  :class="movie.vote_average >= 7 ? 'bg-green-600' : movie.vote_average >= 5 ? 'bg-yellow-600' : 'bg-red-600'"
+                  class="text-xs font-bold px-1.5 py-0.5 rounded"
+                  x-text="movie.vote_average?.toFixed(1)"
+                ></span>
+              </div>
             </div>
-            <div class="absolute top-2 right-2" x-show="movie.vote_average > 0">
-              <span
-                :class="movie.vote_average >= 7 ? 'bg-green-600' : movie.vote_average >= 5 ? 'bg-yellow-600' : 'bg-red-600'"
-                class="text-xs font-bold px-1.5 py-0.5 rounded"
-                x-text="movie.vote_average?.toFixed(1)"
-              ></span>
-            </div>
-          </div>
-          <p class="mt-2 text-sm text-white/70 truncate group-hover:text-white transition" x-text="movie.title"></p>
-          <p class="text-xs text-white/40" x-text="movie.release_date?.substring(0,4)"></p>
-        </a>
-      </template>
+            <p class="mt-2 text-sm text-white/70 truncate group-hover:text-white transition" x-text="movie.title"></p>
+            <p class="text-xs text-white/40" x-text="movie.release_date?.substring(0,4)"></p>
+          </a>
+        </template>
+      </div>
+
+      <!-- Load More -->
+      <div class="text-center mt-8" x-show="hasMore && !loading">
+        <button
+          @click="loadMore()"
+          :disabled="loadingMore"
+          class="bg-white/10 hover:bg-white/15 disabled:opacity-50 text-white px-8 py-3 rounded-lg font-medium transition flex items-center gap-2 mx-auto"
+        >
+          <template x-if="loadingMore"><div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div></template>
+          <span x-text="loadingMore ? 'Loading...' : 'Load More'"></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Recommendations based on search -->
+    <div x-show="searchRecs.length > 0 && !loading" class="mt-12">
+      <div class="flex items-center gap-3 mb-4">
+        <h2 class="text-xl font-bold">You Might Also Like</h2>
+        <span class="px-2 py-0.5 rounded-full bg-[#e50914]/20 text-[#e50914] text-xs font-medium">ML</span>
+      </div>
+      <div class="overflow-x-auto hide-scrollbar">
+        <div class="flex space-x-4 pb-4">
+          <template x-for="movie in searchRecs" :key="'rec-'+movie.id">
+            <a :href="'/movie/' + movie.id + '/'" class="flex-shrink-0 w-40 sm:w-48 group">
+              <div class="relative rounded-lg overflow-hidden aspect-[2/3] bg-white/5 ring-1 ring-[#e50914]/20">
+                <img
+                  :src="movie.poster_path ? 'https://image.tmdb.org/t/p/w500' + movie.poster_path : ''"
+                  :alt="movie.title"
+                  class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  loading="lazy"
+                >
+                <div class="absolute inset-0 card-gradient opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <div class="absolute bottom-0 left-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <p class="text-sm font-semibold truncate" x-text="movie.title"></p>
+                </div>
+                <div class="absolute top-2 right-2" x-show="movie.vote_average > 0">
+                  <span
+                    :class="movie.vote_average >= 7 ? 'bg-green-600' : movie.vote_average >= 5 ? 'bg-yellow-600' : 'bg-red-600'"
+                    class="text-xs font-bold px-1.5 py-0.5 rounded"
+                    x-text="movie.vote_average?.toFixed(1)"
+                  ></span>
+                </div>
+              </div>
+              <p class="mt-2 text-sm text-white/70 truncate group-hover:text-white transition" x-text="movie.title"></p>
+            </a>
+          </template>
+        </div>
+      </div>
     </div>
 
     <!-- Empty State: No query -->
-    {% if not query %}
-    <div class="text-center py-20" x-show="movies.length === 0 && !loading">
+    <div x-show="!query && movies.length === 0 && !loading" class="text-center py-20">
       <svg class="w-24 h-24 mx-auto mb-4 text-white/10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
       </svg>
       <p class="text-xl font-bold text-white/40">Start searching</p>
       <p class="text-sm text-white/30 mt-1">Type a movie title to get started</p>
     </div>
-    {% endif %}
 
     <!-- Empty State: No results -->
-    {% if query %}
-    <div x-show="movies.length === 0 && !loading" class="text-center py-20">
+    <div x-show="query && movies.length === 0 && !loading" class="text-center py-20">
       <svg class="w-24 h-24 mx-auto mb-4 text-white/10" fill="currentColor" viewBox="0 0 24 24">
         <path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z"/>
       </svg>
       <p class="text-xl font-bold text-white/40">No results found</p>
       <p class="text-sm text-white/30 mt-1">Try different keywords or check the spelling</p>
       <a href="/movies/" class="inline-block mt-4 text-[#e50914] hover:underline text-sm">Browse all movies</a>
-    </div>
-    {% endif %}
-
-    <!-- Loading -->
-    <template x-if="loading">
-      <div class="flex justify-center py-10">
-        <div class="w-8 h-8 border-2 border-[#e50914] border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    </template>
-
-    <!-- Load More -->
-    <div class="text-center mt-10" x-show="hasMore && !loading && movies.length > 0">
-      <button
-        @click="loadMore()"
-        class="bg-white/10 hover:bg-white/15 text-white px-8 py-3 rounded-lg font-medium transition"
-      >
-        Load More
-      </button>
     </div>
 
   </div>
@@ -119,29 +168,89 @@
 function searchData() {
   return {
     movies: [],
-    query: '{{ query|default:""|escapejs }}',
+    searchRecs: [],
+    query: '',
     page: 1,
     totalResults: 0,
     hasMore: false,
     loading: false,
+    loadingMore: false,
+    error: '',
 
     init() {
+      // Parse initial data from Django (for direct URL visits with ?q=)
+      const initialQuery = '{{ query|default:""|escapejs }}';
+      if (initialQuery) {
+        this.query = initialQuery;
+      }
       try {
         this.movies = JSON.parse('{{ results_json|default:"[]"|escapejs }}');
       } catch(e) { this.movies = []; }
       try {
+        this.searchRecs = JSON.parse('{{ search_recs_json|default:"[]"|escapejs }}');
+      } catch(e) { this.searchRecs = []; }
+      try {
         this.totalResults = parseInt('{{ total_results|default:"0" }}') || this.movies.length;
       } catch(e) { this.totalResults = this.movies.length; }
+      const totalPages = parseInt('{{ total_pages|default:"1" }}') || 1;
+      this.hasMore = this.movies.length > 0 && 1 < totalPages;
 
-      this.hasMore = this.movies.length > 0 && this.movies.length < this.totalResults;
+      // Focus the search input
+      this.$nextTick(() => { if (this.$refs.searchInput) this.$refs.searchInput.focus(); });
+    },
+
+    async liveSearch() {
+      if (!this.query.trim()) {
+        this.movies = [];
+        this.searchRecs = [];
+        this.totalResults = 0;
+        return;
+      }
+      if (this.query.trim().length < 2) return;
+
+      this.loading = true;
+      this.error = '';
+      this.page = 1;
+      const region = Alpine.store('region')?.code || 'US';
+
+      // Update URL without reload
+      window.history.replaceState({}, '', '/search/?q=' + encodeURIComponent(this.query));
+
+      try {
+        const res = await fetch(`/api/movies/search/?q=${encodeURIComponent(this.query)}&page=1&region=${region}`);
+        const data = await res.json();
+        if (data.error) {
+          this.error = data.error;
+          this.movies = [];
+        } else {
+          this.movies = data.results || [];
+          this.totalResults = data.total_results || this.movies.length;
+          this.hasMore = this.page < (data.total_pages || 1);
+        }
+      } catch(e) {
+        this.error = 'Connection failed. Please check your internet and try again.';
+        this.movies = [];
+      }
+
+      // Fetch recommendations based on search results
+      this.searchRecs = [];
+      if (this.movies.length >= 2) {
+        try {
+          const res = await fetch(`/api/movies/search-recs/?q=${encodeURIComponent(this.query)}&region=${region}`);
+          const data = await res.json();
+          this.searchRecs = data.recommendations || [];
+        } catch(e) { this.searchRecs = []; }
+      }
+
+      this.loading = false;
     },
 
     async loadMore() {
-      if (this.loading || !this.query) return;
+      if (this.loadingMore || !this.query) return;
       this.page++;
-      this.loading = true;
+      this.loadingMore = true;
       try {
-        const region = Alpine.store('region').code;
+        const region = Alpine.store('region')?.code || 'US';
         const res = await fetch(`/api/movies/search/?q=${encodeURIComponent(this.query)}&page=${this.page}&region=${region}`);
         const data = await res.json();
         const results = data.results || [];
@@ -151,7 +260,7 @@ function searchData() {
       } catch(e) {
         console.warn('Search load more failed:', e);
       }
-      this.loading = false;
+      this.loadingMore = false;
     },
   };
 }
