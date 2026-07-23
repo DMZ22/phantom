@@ -16,15 +16,16 @@
         x-transition:enter="transition ease-out duration-700"
         x-transition:enter-start="opacity-0"
         x-transition:enter-end="opacity-100"
-        x-transition:leave="transition ease-in duration-500"
+        x-transition:leave="transition ease-in duration-700"
         x-transition:leave-start="opacity-100"
-        x-transition:leave-end="opacity-0"
+        x-transition:leave-end="opacity-100"
+        :style="current === index ? 'z-index:2' : 'z-index:1'"
         class="absolute inset-0"
       >
         <!-- Backdrop Image -->
         <div class="absolute inset-0">
           <img
-            :src="'https://image.tmdb.org/t/p/original' + movie.backdrop_path"
+            :src="movie.backdrop_path ? 'https://image.tmdb.org/t/p/original' + movie.backdrop_path : (movie.poster_path ? 'https://image.tmdb.org/t/p/w1280' + movie.poster_path : '')"
             :alt="movie.title"
             class="w-full h-full object-cover"
           >
@@ -75,7 +76,7 @@
     <div class="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center space-x-2 z-10">
       <template x-for="(movie, index) in heroMovies" :key="'dot-'+movie.id">
         <button
-          @click="current = index"
+          @click="goTo(index)"
           :class="current === index ? 'w-8 bg-[#e50914]' : 'w-2.5 bg-white/30 hover:bg-white/50'"
           class="h-2.5 rounded-full transition-all duration-300"
         ></button>
@@ -389,11 +390,22 @@ function homeData() {
       this.apiError = {{ api_error|yesno:"true,false" }};
 
       // Auto-rotate hero
+      this.startRotation();
+    },
+
+    startRotation() {
+      if (this._interval) clearInterval(this._interval);
       if (this.heroMovies.length > 1) {
         this._interval = setInterval(() => {
           this.current = (this.current + 1) % this.heroMovies.length;
         }, 8000);
       }
+    },
+
+    goTo(index) {
+      this.current = index;
+      // restart the timer so a manual pick isn't auto-advanced a moment later
+      this.startRotation();
     },
 
     async switchTopPeriod(period) {

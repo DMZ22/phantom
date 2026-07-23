@@ -123,8 +123,8 @@ function getCookie(name) {
  * Scroll a horizontal movie row left or right
  */
 function scrollRow(el, direction) {
-  const container = el.closest('.relative')?.querySelector('.overflow-x-auto')
-    || el.closest('.relative')?.querySelector('[class*="overflow-x"]')
+  const container = el.closest('section')?.querySelector('.overflow-x-auto')
+    || el.closest('section')?.querySelector('[class*="overflow-x"]')
     || el.parentElement?.querySelector('.overflow-x-auto');
   if (!container) return;
   const scrollAmount = container.clientWidth * 0.75;
